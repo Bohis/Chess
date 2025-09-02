@@ -1,0 +1,4 @@
+WHITE = "W"
+BLACK = "B"
+
+BOARD_SIZE = 8
