@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from chess_desk import Chess_desk
 from constant import *
-from abstract_figure import Abstract_figure
+from figures import Abstract_figure
 
 class Cell:
     def __init__(self, color:Literal["W","B"], index_row:int, index_column:int):

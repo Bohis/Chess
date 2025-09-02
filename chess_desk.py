@@ -26,10 +26,6 @@ class Chess_desk:
                         column += int(c)
                         continue
                     
-                    if c in "pP":
-                        column += 1
-                        continue
-                    
                     self._board[row][column].figure = self._dict_of_figure[c.lower()](WHITE if c.isupper() else BLACK)
                     column += 1
                 row += 1
