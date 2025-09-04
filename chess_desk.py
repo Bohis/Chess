@@ -1,13 +1,23 @@
 from cell import Cell
 from constant import *
 from figures import *
+from move import Move
 
 class Chess_desk:
     def __init__(self, fen : str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"):
         self._board = None
-        self._create_cells()
+        self._move_now = None
+        self._move_amount = 0
+        self._half_move_amount = 0
+        self._castling_white = ""
+        self._castling_black = ""
         self._dict_of_figure = {"p": Pawn, "n":Knight, "r": Rook, "b":Bishop, "k":King, "q":Queen}
+        self._fall_white = []
+        self._fall_black = []
+        
+        self._create_cells()
         self._fill_desk_from_fen(fen)
+        
 
     def _create_cells(self) -> None:
         self._board = [[Cell(WHITE if row % 2 == column % 2 else BLACK, row, column) for column in range(BOARD_SIZE)]\
@@ -19,6 +29,28 @@ class Chess_desk:
             
             row = 0
             column = 0
+            
+            if move.upper() in [WHITE, BLACK]:
+                self._move_now = move.upper()
+            else:
+                raise ValueError("move color is incorect")
+            
+            if half_move_amount.isdigit():
+                self._half_move_amount = int(half_move_amount)
+            else:
+                raise ValueError("half move amount color is incorect")
+            
+            if move_amount.isdigit():
+                self._move_amount = int(move_amount)
+            else:
+                raise ValueError("move amount color is incorect")
+            
+            if 2 <= len(castling) <= 4:
+                self._castling_black = "".join(filter(lambda c: c.islower(), castling))
+                self._castling_white = "".join(filter(lambda c: c.isupper(), castling))
+            else:
+                raise ValueError("castling is incorect")
+                
             
             for line in position_figures.split("/"):
                 for c in line:
@@ -44,51 +76,53 @@ class Chess_desk:
         
         return self._board[row][column]
     
-    def _convert_chess_pos_to_index(self, chess_pos:str)->tuple[int,int]:
-        if len(chess_pos) != 2:
-            raise ValueError("Incorrect letter")
-        
-        letter, number = chess_pos[0], int(chess_pos[1])
-        
-        if not (ord("a") <= ord(letter) <= ord("h")+1):
-            raise ValueError("Incorrect letter")
-        if not (1 <= number <= BOARD_SIZE):
-            raise ValueError("Incorrect number")
-        
-        row = BOARD_SIZE - number
-        column = ord(letter) - ord("a")
-        
-        return (row, column)
-            
-    
-    def can_move(self, from_cell:str,to_cell:str) -> bool:
+    def can_move(self, move: Move) -> bool:
         try:
-            from_index = self._convert_chess_pos_to_index(from_cell)
-            to_index = self._convert_chess_pos_to_index(to_cell)
-
-            start_cell = self.get_cell(*from_index)
-            end_cell = self.get_cell(*to_index)
+            start_cell = self.get_cell(*move.start_pos)
+            end_cell = self.get_cell(*move.end_pos)
             
             if start_cell.is_empty:
+                return False
+
+            if start_cell.figure.color != self._move_now:
                 return False
             
             if end_cell.is_contains_figure and end_cell.figure.color == start_cell.figure.color:
                 return False
             
-            return start_cell.figure.can_move(self, from_index, to_index)
-        except:
+            return start_cell.figure.can_move(self, move)
+        except Exception as error:
+            print(f"Error move {error}")
             return False
         
-        
-    def move(self, from_cell:str, to_cell:str) -> bool:
-        if not self.can_move(from_cell, to_cell):
+    def move(self, move: Move) -> bool:
+        if not self.can_move(move):
             return
         
-        from_index = self._convert_chess_pos_to_index(from_cell)
-        to_index = self._convert_chess_pos_to_index(to_cell)
+        start_cell = self.get_cell(*move.start_pos)
+        end_cell = self.get_cell(*move.end_pos)
         
-        self._board[to_index[0]][to_index[1]].figure = self._board[from_index[0]][from_index[1]].figure
-        self._board[from_index[0]][from_index[1]].figure = None
+        if end_cell.figure != None:
+            
+            if end_cell.figure.color == WHITE:
+                self._fall_white.append(end_cell.figure.color)
+            else:
+                self._fall_black.append(end_cell.figure.color)
+                
+            end_cell.figure = None
+            
+        end_cell.figure = start_cell.figure
+        start_cell.figure = None
+
+        end_cell.figure.figure_move()
+
+        self._half_move_amount += 1
+        
+        if self._move_now == WHITE:
+            self._move_now = BLACK
+        else:
+            self._move_now = WHITE
+            self._move_amount += 1
             
     def __str__(self):
         result = ""
@@ -115,15 +149,28 @@ class Chess_desk:
 
 if __name__ == "__main__":
     board = Chess_desk()
+    moves = ["e2e4","e7e5","g1f3","b8c6","f1c4","g8f6","d2d3","f8c5","c2c3","d7d6","b1d2","c8g4","h2h3","g4h5"]
     
     while True:
         print(board)
 
-        from_pos,to_pos = input("enter your move: ").split()
+        #position = input("enter your move: ")
         
-        if not board.can_move(from_pos, to_pos):
+        position = moves.pop(0)
+        print(position)
+        
+        try:
+            move = Move(position)
+        except Exception as error:
+            print(error)
+            continue
+        
+        if not board.can_move(move):
             print("incorect move")
             continue
         
-        board.move(from_pos, to_pos)
+        board.move(move)
+        
+        if len(moves) == 0:
+            break
     
